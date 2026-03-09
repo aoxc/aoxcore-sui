@@ -1,7 +1,7 @@
 <div align="center">
 
 <a href="https://github.com/aoxc/aoxcore-sui">
-  <img src="logos/aoxc.png" alt="AOXC Logo" width="180">
+  <img src="logos/256.png" alt="AOXC Logo" width="180">
 </a>
 
 # 🌐 AOXC Sui Protocol
