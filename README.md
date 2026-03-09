@@ -64,6 +64,8 @@ See `docs/AUDIT_NOTES.md`, `docs/SPEC.md`, `docs/EVENT_MAP.md`, and `docs/INDEXE
 - `docs/RELEASE_CHECKLIST.md` — release öncesi audit kapıları ve imza checklisti.
 - `docs/ECONOMY.md` — Phase-5 Neural Economy katmanı.
 - `docs/ROADMAP_2026.md` — 2026 hedef ve kilometre taşları.
+- `docs/GAP_ANALYSIS.md` — "full mü?" sorusu için kalan teknik/operasyonel gap analizi.
+=======
 
 ### AI Compatibility Layer
 - `ai/README.md` — AOXCAN AI klasörünün kapsamı.
