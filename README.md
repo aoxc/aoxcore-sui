@@ -43,5 +43,4 @@ See `docs/AUDIT_NOTES.md`, `docs/SPEC.md`, `docs/EVENT_MAP.md`, and `docs/INDEXE
 - `docs/AUDIT_NOTES.md` — phase progress and open gaps.
 - `docs/EVENT_MAP.md` — indexer event contracts.
 - `docs/INDEXER_RUNBOOK.md` — operations and reconciliation workflows.
-- `docs/SECURITY_CHECKLIST.md` — pre-mainnet security gate.
-- `docs/WALRUS_DIFFERENTIATION.md` — Walrus tabanlı farklılaşma sözleşmeleri ve AI-first entegrasyon önerileri.
+- `docs/SECURITY_CHECKLIST.md` — pre-mainnet security gate.- `docs/WALRUS_DIFFERENTIATION.md` — Walrus tabanlı farklılaşma sözleşmeleri ve AI-first entegrasyon önerileri.
