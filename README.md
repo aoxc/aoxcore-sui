@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="logos/aoxc.png" alt="AOXC Logo" width="160" style="border-radius: 20%; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
+<img src="logos/aoxc.png" alt="AOXC Logo" width="240" style="border-radius: 20%; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
 
 # 🌐 AOXC Sui Protocol
 **Enterprise-grade Sui-native Protocol Stack**
