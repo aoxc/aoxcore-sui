@@ -94,6 +94,9 @@ Primary modules include:
 - reputation scoring mechanisms
 - protocol circuit breakers
 - bridge payload validation
+- zk light client verifier
+- walrus-backed archive connector
+- auto rebalancer for economic mismatch response
 
 Each module is designed with strict type safety and explicit ownership semantics.
 

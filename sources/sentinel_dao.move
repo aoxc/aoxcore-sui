@@ -30,6 +30,7 @@ module aoxc::sentinel_dao {
         last_exec_ms: u64,
         proposals: Table<u64, Proposal>,
         veto_votes: Table<u64, u64>,
+        anomaly_trigger_bps: u64,
     }
 
     public struct Proposal has copy, drop, store {
@@ -45,6 +46,8 @@ module aoxc::sentinel_dao {
         action_type: u8,
         eta_ms: u64,
     }
+
+    public struct ThreatSignalProcessed has copy, drop { score_bps: u64, triggered_halt: bool }
 
     public struct ProposalFinalized has copy, drop {
         id: u64,
@@ -75,6 +78,7 @@ module aoxc::sentinel_dao {
             last_exec_ms: 0,
             proposals: table::new<u64, Proposal>(ctx),
             veto_votes: table::new<u64, u64>(ctx),
+            anomaly_trigger_bps: 8_500,
         };
         sui::transfer::share_object(dao);
         sui::transfer::transfer(cap, tx_context::sender(ctx));
@@ -84,6 +88,32 @@ module aoxc::sentinel_dao {
     entry fun set_timelock_ms(_cap: &DaoAdminCap, dao: &mut SentinelDao, next: u64) {
         validate_policy_limits(next, 0);
         dao.timelock_ms = next;
+    }
+
+    public fun validate_anomaly_score(score_bps: u64) {
+        assert!(score_bps <= 10_000, errors::E_INVALID_ARGUMENT);
+    }
+
+    entry fun set_anomaly_trigger_bps(_cap: &DaoAdminCap, dao: &mut SentinelDao, next: u64) {
+        validate_anomaly_score(next);
+        dao.anomaly_trigger_bps = next;
+    }
+
+    entry fun scoring_gate(
+        _bot_cap: &SentinelBotCap,
+        dao: &SentinelDao,
+        breaker: &mut circuit_breaker::CircuitBreaker,
+        anomaly_score_bps: u64,
+        reason_hash: vector<u8>,
+    ) {
+        validate_anomaly_score(anomaly_score_bps);
+        assert!(vector::length(&reason_hash) > 0, errors::E_EMPTY_HASH);
+        let mut triggered = false;
+        if (anomaly_score_bps >= dao.anomaly_trigger_bps) {
+            triggered = true;
+            circuit_breaker::pause_from_module(breaker, reason_hash);
+        };
+        event::emit(ThreatSignalProcessed { score_bps: anomaly_score_bps, triggered_halt: triggered });
     }
 
     entry fun queue_proposal(
@@ -118,7 +148,6 @@ module aoxc::sentinel_dao {
         let votes = table::borrow_mut(&mut dao.veto_votes, proposal_id);
         *votes = *votes + weight;
     }
-
 
 
     entry fun sentinel_emergency_halt(

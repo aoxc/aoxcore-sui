@@ -1,6 +1,6 @@
 module aoxc::neural_bridge {
     use std::bcs;
-    use std::string::String;
+    use std::string::{Self, String};
     use std::vector;
     use aoxc::bridge_payload;
     use aoxc::circuit_breaker;
@@ -151,10 +151,12 @@ module aoxc::neural_bridge {
         gateway.finalized_epoch = epoch;
     }
 
+    /// Stage command until external chain finality is confirmed.
+
     public fun verify_and_apply(
         gateway: &mut NeuralGateway,
         quorum: &relay::AttestorQuorum,
-        breaker: &mut circuit_breaker::CircuitBreaker,
+        _breaker: &mut circuit_breaker::CircuitBreaker,
         command: BridgeCommand,
         signatures: vector<vector<u8>>,
         clock: &Clock,
@@ -192,6 +194,26 @@ module aoxc::neural_bridge {
             quorum_signers: signer_count,
         });
 
+        digest
+    }
+
+    public fun execute_pending(
+        gateway: &mut NeuralGateway,
+        breaker: &mut circuit_breaker::CircuitBreaker,
+        digest: vector<u8>,
+        clock: &Clock,
+    ): vector<u8> {
+        assert!(!table::contains(&gateway.used_digests, &digest), errors::E_REPLAY);
+        assert!(table::contains(&gateway.pending_commands, &digest), errors::E_NOT_FOUND);
+        let pending = table::borrow(&gateway.pending_commands, copy digest);
+        assert!(gateway.finalized_epoch >= pending.finalize_at_epoch, errors::E_FINALITY_PENDING);
+
+        let applied = table::remove(&mut gateway.pending_commands, copy digest);
+        if (applied.payload_kind == bridge_payload::kind_system_halt()) {
+            circuit_breaker::pause_from_module(breaker, copy applied.proof_root);
+        };
+        if (applied.payload_kind == bridge_payload::kind_system_resume()) {
+            circuit_breaker::resume_from_module(breaker, copy applied.proof_root);
         assert!(gateway.finalized_epoch >= finalize_at, errors::E_FINALITY_PENDING);
         let pending = table::remove(&mut gateway.pending_commands, copy digest);
 
@@ -207,6 +229,10 @@ module aoxc::neural_bridge {
         table::add(&mut gateway.used_digests, digest, true);
 
         event::emit(CommandApplied {
+            command_id: applied.command_id,
+            digest: digest_evt,
+            payload_kind: applied.payload_kind,
+            quorum_signers: applied.signer_count,
             command_id: pending.command_id,
             digest: digest_evt,
             payload_kind: pending.payload_kind,
@@ -220,10 +246,6 @@ module aoxc::neural_bridge {
 
 
     spec verify_and_apply {
-        // Formal safety intent:
-        // - replayed commands abort
-        // - quorum threshold must be met before apply
-        // - pause state changes only for pause/resume kinds
         pragma opaque;
         ensures true;
     }
