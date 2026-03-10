@@ -10,6 +10,7 @@ module aoxc::full_flow_tests {
     use aoxc::sentinel_dao;
     use aoxc::staking;
     use aoxc::treasury;
+    use aoxc::verifier_registry;
 
     fun xsender(): vector<u8> { b"12345678901234567890" }
 
@@ -60,6 +61,134 @@ module aoxc::full_flow_tests {
         let _ = decoded_pause;
         let _ = pause_target;
         let _ = action;
+    }
+
+    #[test]
+    fun xlayer_asset_routes_decode() {
+        let mint_raw = bridge_payload::encode_asset_mint_payload(
+            bridge_payload::schema_v1(),
+            bridge_payload::xlayer_testnet_chain_id(),
+            xsender(),
+            bridge_payload::target_aoxc(),
+            501,
+            10,
+            @0xA0,
+            b"mint-proof",
+        );
+        let burn_raw = bridge_payload::encode_asset_burn_payload(
+            bridge_payload::schema_v1(),
+            bridge_payload::xlayer_chain_id(),
+            xsender(),
+            bridge_payload::target_aoxc(),
+            502,
+            5,
+            @0xB0,
+            b"burn-proof",
+        );
+
+        let mint = bridge_payload::decode_asset_mint_payload(mint_raw);
+        let burn = bridge_payload::decode_asset_burn_payload(burn_raw);
+        assert!(bridge_payload::kind(&mint) == bridge_payload::kind_x_mint(), 2);
+        assert!(bridge_payload::kind(&burn) == bridge_payload::kind_x_burn(), 2);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 2)]
+    fun typed_payload_rejects_zero_sender() {
+        let _ = bridge_payload::new_bridge_payload(
+            bridge_payload::schema_v1(),
+            bridge_payload::xlayer_chain_id(),
+            vector[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            bridge_payload::kind_system_halt(),
+            bridge_payload::target_breaker(),
+            9,
+            string::utf8(b"invalid sender"),
+            b"proof",
+        );
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 2)]
+    fun typed_payload_rejects_empty_note() {
+        let _ = bridge_payload::new_bridge_payload(
+            bridge_payload::schema_v1(),
+            bridge_payload::xlayer_chain_id(),
+            xsender(),
+            bridge_payload::kind_system_halt(),
+            bridge_payload::target_breaker(),
+            12,
+            string::utf8(b""),
+            b"proof",
+        );
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 16)]
+    fun xlayer_asset_routes_reject_zero_amount() {
+        let mint_raw = bridge_payload::encode_asset_mint_payload(
+            bridge_payload::schema_v1(),
+            bridge_payload::xlayer_testnet_chain_id(),
+            xsender(),
+            bridge_payload::target_aoxc(),
+            601,
+            0,
+            @0xA0,
+            b"mint-proof",
+        );
+
+        let _ = bridge_payload::decode_asset_mint_payload(mint_raw);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 2)]
+    fun xlayer_asset_routes_reject_zero_recipient() {
+        let burn_raw = bridge_payload::encode_asset_burn_payload(
+            bridge_payload::schema_v1(),
+            bridge_payload::xlayer_chain_id(),
+            xsender(),
+            bridge_payload::target_aoxc(),
+            602,
+            7,
+            @0x0,
+            b"burn-proof",
+        );
+
+        let _ = bridge_payload::decode_asset_burn_payload(burn_raw);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 26)]
+    fun typed_payload_rejects_unsupported_chain() {
+        let _ = bridge_payload::new_bridge_payload(
+            bridge_payload::schema_v1(),
+            1,
+            xsender(),
+            bridge_payload::kind_system_halt(),
+            bridge_payload::target_breaker(),
+            91,
+            string::utf8(b"invalid chain"),
+            b"proof",
+        );
+    }
+
+
+
+    #[test]
+    fun intent_payload_smoke() {
+        let intent_raw = bridge_payload::encode_intent_payload(
+            bridge_payload::schema_v1(),
+            bridge_payload::xlayer_chain_id(),
+            xsender(),
+            bridge_payload::target_breaker(),
+            777,
+            string::utf8(b"system enters safe state"),
+            9000,
+            1,
+            b"intent-proof",
+        );
+        let decoded = bridge_payload::decode_intent_payload(intent_raw, bridge_payload::kind_system_halt());
+        assert!(bridge_payload::kind(&decoded) == bridge_payload::kind_system_halt(), 2);
+        verifier_registry::validate_verifier(&verifier_registry::verifier_zk_light_client());
     }
 
     #[test]

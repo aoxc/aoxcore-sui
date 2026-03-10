@@ -37,6 +37,23 @@ The architecture is designed to preserve protocol integrity while supporting lon
 
 ---
 
+# Why Sui-First (and How XLayer Fits)
+
+AOXC is **Sui-first by design**, while still supporting cross-layer coordination with typed payloads.
+
+Why this preference:
+- **Object-centric security model:** strongly typed objects and explicit ownership reduce state ambiguity.
+- **Deterministic asset lifecycle:** easier to reason about custody, transfer, and policy enforcement.
+- **Move-native safety ergonomics:** capability-based access control patterns align with protocol governance hardening.
+
+Where XLayer still matters:
+- as an external coordination source for cross-chain signaling,
+- for bridge command interoperability through typed payload validation.
+
+In short: this repository treats Sui as the execution/security anchor, and XLayer as an interoperability domain.
+
+---
+
 # Key Capabilities
 
 ### Object-Centric Asset Model
@@ -77,6 +94,11 @@ Primary modules include:
 - reputation scoring mechanisms
 - protocol circuit breakers
 - bridge payload validation
+- zk light client verifier
+- walrus-backed archive connector
+- auto rebalancer for economic mismatch response
+- verifier registry for pluggable trust backends
+- reserved protocol events for AI-agent forward compatibility
 
 Each module is designed with strict type safety and explicit ownership semantics.
 
@@ -84,7 +106,7 @@ Each module is designed with strict type safety and explicit ownership semantics
 
 ## Documentation (`/docs`)
 
-Technical documentation and operational specifications.
+Technical documentation and operational specifications, including the project whitepaper.
 
 Key documents include:
 
@@ -93,6 +115,10 @@ Key documents include:
 - release verification procedures
 - indexer operational runbooks
 - architecture specifications
+- whitepaper (vision, security posture, roadmap to production)
+- future readiness plan (audit closure + crypto agility roadmap)
+- code audit report (module-by-module findings and action plan)
+- architecture alignment (Sui-first execution + XLayer interoperability fit)
 
 ---
 
