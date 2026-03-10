@@ -31,6 +31,17 @@ module aoxc::phase1_negative_tests {
     }
 
     #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun bridge_rejects_empty_signer_set() {
+        neural_bridge::validate_signer_set(&vector::empty<vector<u8>>());
+    }
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun bridge_rejects_empty_signer_pubkey() {
+        let keys = vector[vector::empty<u8>()];
+        neural_bridge::validate_signer_set(&keys);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
     fun relay_rejects_unknown_report_type() {
         relay::validate_report_type(99);
     }

@@ -5,7 +5,8 @@ module aoxc::bridge_payload {
     use aoxc::errors;
 
     const SCHEMA_V1: u16 = 1;
-    const XLAYER_EVM_CHAIN_ID: u64 = 196;
+    const XLAYER_MAINNET_CHAIN_ID: u64 = 196;
+    const XLAYER_TESTNET_CHAIN_ID: u64 = 195;
 
     const KIND_SYSTEM_HALT: u8 = 1;
     const KIND_SYSTEM_RESUME: u8 = 2;
@@ -16,6 +17,7 @@ module aoxc::bridge_payload {
     const TARGET_BREAKER: vector<u8> = b"circuit_breaker";
     const TARGET_TREASURY: vector<u8> = b"treasury";
     const TARGET_AOXC: vector<u8> = b"aoxc";
+    const MAX_NOTE_BYTES: u64 = 256;
 
     public struct BridgePayload has copy, drop, store {
         schema_version: u16,
@@ -67,12 +69,61 @@ module aoxc::bridge_payload {
         proof_root: vector<u8>,
     }
 
+    public struct AssetRoutePayload has copy, drop, store {
+        schema_version: u16,
+        evm_chain_id: u64,
+        xlayer_sender: vector<u8>,
+        target_module: String,
+        ref_id: u64,
+        amount: u64,
+        recipient: address,
+        proof_root: vector<u8>,
+    }
+
     public fun validate_schema_version(version: u16) {
         assert!(version == SCHEMA_V1, errors::E_SCHEMA_VERSION);
     }
 
     public fun validate_chain_id(chain_id: u64) {
-        assert!(chain_id == XLAYER_EVM_CHAIN_ID, errors::E_CHAIN_ID_INVALID);
+        let ok = chain_id == XLAYER_MAINNET_CHAIN_ID || chain_id == XLAYER_TESTNET_CHAIN_ID;
+        assert!(ok, errors::E_CHAIN_ID_INVALID);
+    }
+
+    fun assert_sender_not_zero(sender: &vector<u8>) {
+        let mut i = 0;
+        let len = vector::length(sender);
+        let mut all_zero = true;
+        while (i < len) {
+            if (*vector::borrow(sender, i) != 0) {
+                all_zero = false;
+                break
+            };
+            i = i + 1;
+        };
+        assert!(!all_zero, errors::E_INVALID_ARGUMENT);
+    }
+
+    fun assert_message_not_empty(message: &String) {
+        assert!(vector::length(string::bytes(message)) > 0, errors::E_INVALID_ARGUMENT);
+    }
+
+    fun assert_message_len(message: &String) {
+        assert!(vector::length(string::bytes(message)) <= MAX_NOTE_BYTES, errors::E_POLICY_LIMIT);
+    }
+
+    fun validate_asset_route_payload(decoded: &AssetRoutePayload, kind: u8) {
+        assert!(decoded.amount > 0, errors::E_AMOUNT_ZERO);
+        assert!(decoded.recipient != @0x0, errors::E_INVALID_ARGUMENT);
+        new_bridge_payload(
+            decoded.schema_version,
+            decoded.evm_chain_id,
+            copy decoded.xlayer_sender,
+            kind,
+            copy decoded.target_module,
+            decoded.ref_id,
+            string::utf8(b"asset-route"),
+            copy decoded.proof_root,
+        );
     }
 
     public fun validate_target_module(target_module: &String, kind: u8) {
@@ -102,6 +153,9 @@ module aoxc::bridge_payload {
         validate_payload_kind(kind);
         validate_target_module(&target_module, kind);
         assert!(vector::length(&xlayer_sender) == 20, errors::E_INVALID_ARGUMENT);
+        assert_sender_not_zero(&xlayer_sender);
+        assert_message_not_empty(&note);
+        assert_message_len(&note);
         assert!(vector::length(&proof_root) > 0, errors::E_EMPTY_HASH);
         BridgePayload { schema_version, evm_chain_id, xlayer_sender, kind, target_module, ref_id, note, proof_root }
     }
@@ -117,6 +171,8 @@ module aoxc::bridge_payload {
         validate_schema_version(schema_version);
         validate_governance_action(action_type);
         validate_target_module(&target_module, action_type);
+        assert_message_not_empty(&reason);
+        assert_message_len(&reason);
         assert!(vector::length(&proof_root) > 0, errors::E_EMPTY_HASH);
         GovernanceAction { schema_version, action_type, target_module, ref_id, reason, proof_root }
     }
@@ -175,11 +231,53 @@ module aoxc::bridge_payload {
         new_bridge_payload(decoded.schema_version, decoded.evm_chain_id, decoded.xlayer_sender, KIND_FUND_UPDATE, decoded.target_module, decoded.ref_id, decoded.policy_name, decoded.proof_root)
     }
 
+    public fun encode_asset_mint_payload(
+        schema_version: u16,
+        evm_chain_id: u64,
+        xlayer_sender: vector<u8>,
+        target_module: String,
+        ref_id: u64,
+        amount: u64,
+        recipient: address,
+        proof_root: vector<u8>,
+    ): vector<u8> {
+        let payload = AssetRoutePayload { schema_version, evm_chain_id, xlayer_sender, target_module, ref_id, amount, recipient, proof_root };
+        bcs::to_bytes(&payload)
+    }
+
+    public fun encode_asset_burn_payload(
+        schema_version: u16,
+        evm_chain_id: u64,
+        xlayer_sender: vector<u8>,
+        target_module: String,
+        ref_id: u64,
+        amount: u64,
+        recipient: address,
+        proof_root: vector<u8>,
+    ): vector<u8> {
+        let payload = AssetRoutePayload { schema_version, evm_chain_id, xlayer_sender, target_module, ref_id, amount, recipient, proof_root };
+        bcs::to_bytes(&payload)
+    }
+
+    public fun decode_asset_mint_payload(raw: vector<u8>): BridgePayload {
+        let decoded = bcs::from_bytes<AssetRoutePayload>(&raw);
+        validate_asset_route_payload(&decoded, KIND_X_MINT);
+        new_bridge_payload(decoded.schema_version, decoded.evm_chain_id, decoded.xlayer_sender, KIND_X_MINT, decoded.target_module, decoded.ref_id, string::utf8(b"xlayer-asset-mint"), decoded.proof_root)
+    }
+
+    public fun decode_asset_burn_payload(raw: vector<u8>): BridgePayload {
+        let decoded = bcs::from_bytes<AssetRoutePayload>(&raw);
+        validate_asset_route_payload(&decoded, KIND_X_BURN);
+        new_bridge_payload(decoded.schema_version, decoded.evm_chain_id, decoded.xlayer_sender, KIND_X_BURN, decoded.target_module, decoded.ref_id, string::utf8(b"xlayer-asset-burn"), decoded.proof_root)
+    }
+
     public fun decode_governance_action(raw: vector<u8>): GovernanceAction {
         let decoded = bcs::from_bytes<GovernanceAction>(&raw);
         validate_schema_version(decoded.schema_version);
         validate_governance_action(decoded.action_type);
         validate_target_module(&decoded.target_module, decoded.action_type);
+        assert_message_not_empty(&decoded.reason);
+        assert_message_len(&decoded.reason);
         assert!(vector::length(&decoded.proof_root) > 0, errors::E_EMPTY_HASH);
         decoded
     }
@@ -206,7 +304,8 @@ module aoxc::bridge_payload {
     public fun kind_x_mint(): u8 { KIND_X_MINT }
     public fun kind_x_burn(): u8 { KIND_X_BURN }
     public fun schema_v1(): u16 { SCHEMA_V1 }
-    public fun xlayer_chain_id(): u64 { XLAYER_EVM_CHAIN_ID }
+    public fun xlayer_chain_id(): u64 { XLAYER_MAINNET_CHAIN_ID }
+    public fun xlayer_testnet_chain_id(): u64 { XLAYER_TESTNET_CHAIN_ID }
     public fun target_breaker(): String { string::utf8(TARGET_BREAKER) }
     public fun target_treasury(): String { string::utf8(TARGET_TREASURY) }
     public fun target_aoxc(): String { string::utf8(TARGET_AOXC) }
