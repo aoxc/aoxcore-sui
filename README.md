@@ -37,6 +37,23 @@ The architecture is designed to preserve protocol integrity while supporting lon
 
 ---
 
+# Why Sui-First (and How XLayer Fits)
+
+AOXC is **Sui-first by design**, while still supporting cross-layer coordination with typed payloads.
+
+Why this preference:
+- **Object-centric security model:** strongly typed objects and explicit ownership reduce state ambiguity.
+- **Deterministic asset lifecycle:** easier to reason about custody, transfer, and policy enforcement.
+- **Move-native safety ergonomics:** capability-based access control patterns align with protocol governance hardening.
+
+Where XLayer still matters:
+- as an external coordination source for cross-chain signaling,
+- for bridge command interoperability through typed payload validation.
+
+In short: this repository treats Sui as the execution/security anchor, and XLayer as an interoperability domain.
+
+---
+
 # Key Capabilities
 
 ### Object-Centric Asset Model
