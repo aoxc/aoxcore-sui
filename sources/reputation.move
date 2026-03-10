@@ -164,6 +164,16 @@ module aoxc::reputation {
         assert!(p.score >= threshold, errors::E_SCORE_TOO_LOW);
     }
 
+    public fun has_profile(book: &ReputationBook, user: address): bool {
+        table::contains(&book.profiles, user)
+    }
+
+    public fun score_or_zero(book: &ReputationBook, user: address): u64 {
+        if (!table::contains(&book.profiles, user)) return 0;
+        let p = table::borrow(&book.profiles, user);
+        p.score
+    }
+
     public fun score_of(book: &ReputationBook, user: address): u64 {
         assert!(table::contains(&book.profiles, user), errors::E_NOT_FOUND);
         let p = table::borrow(&book.profiles, user);
