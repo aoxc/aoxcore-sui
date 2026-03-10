@@ -253,6 +253,45 @@ module aoxc::neural_bridge {
         };
         if (applied.payload_kind == bridge_payload::kind_system_resume()) {
             circuit_breaker::resume_from_module(breaker, copy applied.proof_root);
+
+        let finalize_at = command.quorum_epoch + gateway.min_finality_epochs;
+        let command_id = command.command_id;
+        let meta = PendingCommandMeta {
+            payload_kind,
+            proof_root: bridge_payload::proof_root(&command.payload),
+            finalize_at_epoch: finalize_at,
+            signer_count,
+            command_id: copy command_id,
+        };
+        table::add(&mut gateway.pending_commands, copy digest, meta);
+        event::emit(CommandPending {
+            command_id: copy command_id,
+            digest: copy digest,
+            payload_kind,
+            finalize_at_epoch: finalize_at,
+            quorum_signers: signer_count,
+        });
+
+        digest
+    }
+
+    public fun execute_pending(
+        gateway: &mut NeuralGateway,
+        breaker: &mut circuit_breaker::CircuitBreaker,
+        digest: vector<u8>,
+        clock: &Clock,
+    ): vector<u8> {
+        assert!(!table::contains(&gateway.used_digests, &digest), errors::E_REPLAY);
+        assert!(table::contains(&gateway.pending_commands, &digest), errors::E_NOT_FOUND);
+        let pending = table::borrow(&gateway.pending_commands, copy digest);
+        assert!(gateway.finalized_epoch >= pending.finalize_at_epoch, errors::E_FINALITY_PENDING);
+
+        let applied = table::remove(&mut gateway.pending_commands, copy digest);
+        if (applied.payload_kind == bridge_payload::kind_system_halt()) {
+            circuit_breaker::pause_from_module(breaker, copy applied.proof_root);
+        };
+        if (applied.payload_kind == bridge_payload::kind_system_resume()) {
+            circuit_breaker::resume_from_module(breaker, copy applied.proof_root);
         assert!(gateway.finalized_epoch >= finalize_at, errors::E_FINALITY_PENDING);
         let pending = table::remove(&mut gateway.pending_commands, copy digest);
 
