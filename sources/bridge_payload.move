@@ -80,6 +80,19 @@ module aoxc::bridge_payload {
         proof_root: vector<u8>,
     }
 
+    /// Intent-based command envelope: define expected outcome and constraints.
+    public struct IntentPayload has copy, drop, store {
+        schema_version: u16,
+        evm_chain_id: u64,
+        xlayer_sender: vector<u8>,
+        target_module: String,
+        ref_id: u64,
+        desired_outcome: String,
+        min_success_bps: u16,
+        expiry_epoch: u64,
+        proof_root: vector<u8>,
+    }
+
     public fun validate_schema_version(version: u16) {
         assert!(version == SCHEMA_V1, errors::E_SCHEMA_VERSION);
     }
@@ -124,6 +137,15 @@ module aoxc::bridge_payload {
             string::utf8(b"asset-route"),
             copy decoded.proof_root,
         );
+    }
+
+
+
+    public fun validate_intent(desired_outcome: &String, min_success_bps: u16, expiry_epoch: u64) {
+        assert_message_not_empty(desired_outcome);
+        assert_message_len(desired_outcome);
+        assert!((min_success_bps as u64) <= 10_000, errors::E_POLICY_LIMIT);
+        assert!(expiry_epoch > 0, errors::E_INVALID_ARGUMENT);
     }
 
     public fun validate_target_module(target_module: &String, kind: u8) {
@@ -269,6 +291,55 @@ module aoxc::bridge_payload {
     public fun decode_asset_burn_payload(raw: vector<u8>): BridgePayload {
         let decoded = bcs::from_bytes<AssetRoutePayload>(&raw);
         validate_asset_route_payload(&decoded, KIND_X_BURN);
+        new_bridge_payload(decoded.schema_version, decoded.evm_chain_id, decoded.xlayer_sender, KIND_X_BURN, decoded.target_module, decoded.ref_id, string::utf8(b"xlayer-asset-burn"), decoded.proof_root)
+    }
+
+
+
+    public fun encode_intent_payload(
+        schema_version: u16,
+        evm_chain_id: u64,
+        xlayer_sender: vector<u8>,
+        target_module: String,
+        ref_id: u64,
+        desired_outcome: String,
+        min_success_bps: u16,
+        expiry_epoch: u64,
+        proof_root: vector<u8>,
+    ): vector<u8> {
+        validate_schema_version(schema_version);
+        validate_chain_id(evm_chain_id);
+        validate_intent(&desired_outcome, min_success_bps, expiry_epoch);
+        let payload = IntentPayload {
+            schema_version,
+            evm_chain_id,
+            xlayer_sender,
+            target_module,
+            ref_id,
+            desired_outcome,
+            min_success_bps,
+            expiry_epoch,
+            proof_root,
+        };
+        bcs::to_bytes(&payload)
+    }
+
+    public fun decode_intent_payload(raw: vector<u8>, kind: u8): BridgePayload {
+        let decoded = bcs::from_bytes<IntentPayload>(&raw);
+        validate_payload_kind(kind);
+        validate_intent(&decoded.desired_outcome, decoded.min_success_bps, decoded.expiry_epoch);
+        new_bridge_payload(
+            decoded.schema_version,
+            decoded.evm_chain_id,
+            decoded.xlayer_sender,
+            kind,
+            decoded.target_module,
+            decoded.ref_id,
+            decoded.desired_outcome,
+            decoded.proof_root,
+        )
+    }
+
         assert!(decoded.amount > 0, errors::E_AMOUNT_ZERO);
         new_bridge_payload(decoded.schema_version, decoded.evm_chain_id, decoded.xlayer_sender, KIND_X_BURN, decoded.target_module, decoded.ref_id, string::utf8(b"xlayer-asset-burn"), decoded.proof_root)
     }

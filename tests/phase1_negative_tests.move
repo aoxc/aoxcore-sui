@@ -15,6 +15,7 @@ module aoxc::phase1_negative_tests {
     use aoxc::sentinel_dao;
     use aoxc::treasury;
     use aoxc::walrus_connector;
+    use aoxc::verifier_registry;
 
     #[test, expected_failure(abort_code = errors::E_STATUS_INVALID)]
     fun aoxc_rejects_invalid_status() {
@@ -66,6 +67,23 @@ module aoxc::phase1_negative_tests {
     #[test, expected_failure(abort_code = errors::E_EMPTY_HASH)]
     fun walrus_rejects_empty_blob_hash() {
         walrus_connector::validate_blob_inputs(&vector::empty<u8>(), &b"cert", &b"bridge");
+    }
+
+
+
+    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
+    fun intent_rejects_bad_success_bps() {
+        bridge_payload::validate_intent(&string::utf8(b"ok"), 10_001, 1);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun verifier_registry_rejects_unknown_verifier() {
+        verifier_registry::validate_verifier(&string::utf8(b"unknown-verifier"));
+    }
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun walrus_rejects_empty_credential_issuer() {
+        walrus_connector::validate_credential_inputs(&vector::empty<u8>(), &b"subject", &b"claim", &b"cert");
     }
 
     #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
@@ -123,6 +141,16 @@ module aoxc::phase1_negative_tests {
     }
 
 
+
+    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
+    fun treasury_reconciliation_rejects_non_interval_block() {
+        treasury::validate_reconciliation_checkpoint(1000, 1001, 0, 32);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_RECONCILIATION_FAILED)]
+    fun staking_rejects_broken_capital_equation() {
+        staking::validate_capital_equation(10, 15, 20);
+    }
 
     #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
     fun treasury_reconciliation_rejects_non_interval_block() {

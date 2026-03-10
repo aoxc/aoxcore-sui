@@ -97,6 +97,8 @@ Primary modules include:
 - zk light client verifier
 - walrus-backed archive connector
 - auto rebalancer for economic mismatch response
+- verifier registry for pluggable trust backends
+- reserved protocol events for AI-agent forward compatibility
 
 Each module is designed with strict type safety and explicit ownership semantics.
 

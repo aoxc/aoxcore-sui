@@ -27,6 +27,20 @@ module aoxc::walrus_connector {
         tag: vector<u8>,
     }
 
+    /// Minimal VC-like envelope for standardized long-term archival claims.
+    public struct VerifiableCredential has copy, drop, store {
+        version: u16,
+        issuer: vector<u8>,
+        subject: vector<u8>,
+        claim_hash: vector<u8>,
+        certified_id: vector<u8>,
+    }
+
+    public struct CredentialAnchored has copy, drop {
+        claim_hash: vector<u8>,
+        certified_id: vector<u8>,
+    }
+
     entry fun init(ctx: &mut TxContext) {
         let cap = WalrusAdminCap { id: object::new(ctx) };
         let archive = WalrusArchive {
@@ -60,6 +74,28 @@ module aoxc::walrus_connector {
         table::add(&mut archive.payload_blobs, seq, pointer);
         table::add(&mut archive.hash_to_certified_id, payload_hash, certified_id);
         event::emit(BlobAnchored { seq, certified_id, tag });
+    }
+
+    public fun validate_credential_inputs(issuer: &vector<u8>, subject: &vector<u8>, claim_hash: &vector<u8>, certified_id: &vector<u8>) {
+        assert!(vector::length(issuer) > 0, errors::E_INVALID_ARGUMENT);
+        assert!(vector::length(subject) > 0, errors::E_INVALID_ARGUMENT);
+        assert!(vector::length(claim_hash) > 0, errors::E_EMPTY_HASH);
+        assert!(vector::length(certified_id) > 0, errors::E_EMPTY_HASH);
+    }
+
+    entry fun anchor_credential(
+        _cap: &WalrusAdminCap,
+        archive: &mut WalrusArchive,
+        issuer: vector<u8>,
+        subject: vector<u8>,
+        claim_hash: vector<u8>,
+        certified_id: vector<u8>,
+    ) {
+        validate_credential_inputs(&issuer, &subject, &claim_hash, &certified_id);
+        assert!(!table::contains(&archive.hash_to_certified_id, &claim_hash), errors::E_ALREADY_EXISTS);
+        let _vc = VerifiableCredential { version: 1, issuer, subject, claim_hash: copy claim_hash, certified_id: copy certified_id };
+        table::add(&mut archive.hash_to_certified_id, copy claim_hash, copy certified_id);
+        event::emit(CredentialAnchored { claim_hash, certified_id });
     }
 
     public fun certified_id_for(archive: &WalrusArchive, payload_hash: vector<u8>): vector<u8> {
