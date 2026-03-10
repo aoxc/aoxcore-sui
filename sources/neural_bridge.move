@@ -152,6 +152,7 @@ module aoxc::neural_bridge {
     }
 
     /// Stage command until external chain finality is confirmed.
+
     public fun verify_and_apply(
         gateway: &mut NeuralGateway,
         quorum: &relay::AttestorQuorum,
@@ -213,6 +214,14 @@ module aoxc::neural_bridge {
         };
         if (applied.payload_kind == bridge_payload::kind_system_resume()) {
             circuit_breaker::resume_from_module(breaker, copy applied.proof_root);
+        assert!(gateway.finalized_epoch >= finalize_at, errors::E_FINALITY_PENDING);
+        let pending = table::remove(&mut gateway.pending_commands, copy digest);
+
+        if (pending.payload_kind == bridge_payload::kind_system_halt()) {
+            circuit_breaker::pause_from_module(breaker, copy pending.proof_root);
+        };
+        if (pending.payload_kind == bridge_payload::kind_system_resume()) {
+            circuit_breaker::resume_from_module(breaker, copy pending.proof_root);
         };
 
         let paused_after = circuit_breaker::is_paused(breaker);
@@ -224,12 +233,17 @@ module aoxc::neural_bridge {
             digest: digest_evt,
             payload_kind: applied.payload_kind,
             quorum_signers: applied.signer_count,
+            command_id: pending.command_id,
+            digest: digest_evt,
+            payload_kind: pending.payload_kind,
+            quorum_signers: pending.signer_count,
             pause_state_after: paused_after,
             executed_at_ms: clock::timestamp_ms(clock),
         });
 
         digest_evt
     }
+
 
     spec verify_and_apply {
         pragma opaque;
