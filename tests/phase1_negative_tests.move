@@ -95,6 +95,11 @@ module aoxc::phase1_negative_tests {
     }
 
     #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun rebalancer_rejects_zero_soft_threshold() {
+        auto_rebalancer::validate_thresholds(0, 100);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
     fun dao_rejects_unknown_action() {
         sentinel_dao::validate_action_type(200);
     }
@@ -149,6 +154,16 @@ module aoxc::phase1_negative_tests {
     }
 
 
+
+    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
+    fun treasury_reconciliation_rejects_non_interval_block() {
+        treasury::validate_reconciliation_checkpoint(1000, 1001, 0, 32);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_RECONCILIATION_FAILED)]
+    fun staking_rejects_broken_capital_equation() {
+        staking::validate_capital_equation(10, 15, 20);
+    }
 
     #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
     fun treasury_reconciliation_rejects_non_interval_block() {

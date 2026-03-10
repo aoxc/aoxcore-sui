@@ -55,6 +55,7 @@ module aoxc::treasury {
     public struct MerkleRewardClaimed has copy, drop { epoch: u64, user: address, amount: u64 }
     public struct YieldPolicyUpdated has copy, drop { lending_enabled: bool, liquidity_enabled: bool, lending_allocation_bps: u16, liquidity_allocation_bps: u16 }
     public struct YieldRebalanced has copy, drop { nonce: u64, lending_amount: u64, liquidity_amount: u64 }
+    public struct SlashedCollateralAbsorbed has copy, drop { relayer: address, amount: u64, new_balance: u64 }
     public struct ReconciliationCheckpointed has copy, drop { block_height: u64, external_locked_tvl: u64, local_accounted_supply: u64, permanent_halt_triggered: bool }
 
     struct ClaimLeafInput has copy, drop, store {
@@ -323,6 +324,14 @@ module aoxc::treasury {
             local_accounted_supply,
             permanent_halt_triggered: permanent_halt,
         });
+    }
+
+
+
+    public(package) fun absorb_slashed_balance<T>(treasury: &mut AutonomousTreasury<T>, relayer: address, amount: u64, slashed: Balance<T>) {
+        assert!(amount > 0, errors::E_AMOUNT_ZERO);
+        balance::join(&mut treasury.vault, slashed);
+        event::emit(SlashedCollateralAbsorbed { relayer, amount, new_balance: balance::value(&treasury.vault) });
     }
 
     entry fun rebalance_yield<T>(
