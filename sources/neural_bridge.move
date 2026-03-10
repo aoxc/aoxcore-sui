@@ -58,8 +58,9 @@ module aoxc::neural_bridge {
         let mut valid: u16 = 0;
         let sig_len = vector::length(signatures);
         let key_len = vector::length(signer_pubkeys);
+        assert!(sig_len == key_len, errors::E_LENGTH_MISMATCH);
         let mut i = 0;
-        while (i < sig_len && i < key_len) {
+        while (i < sig_len) {
             let sig = vector::borrow(signatures, i);
             let pk = vector::borrow(signer_pubkeys, i);
             let ok = ecdsa_k1::secp256k1_verify(sig, pk, digest, 0) && relay::is_attestor_active(quorum, pk);
@@ -74,6 +75,19 @@ module aoxc::neural_bridge {
         assert!(min > 0, errors::E_INVALID_ARGUMENT);
     }
 
+    public fun validate_signer_set(pubkeys: &vector<vector<u8>>) {
+        assert!(vector::length(pubkeys) > 0, errors::E_INVALID_ARGUMENT);
+        let mut i = 0;
+        while (i < vector::length(pubkeys)) {
+            assert!(vector::length(vector::borrow(pubkeys, i)) > 0, errors::E_INVALID_ARGUMENT);
+            i = i + 1;
+        };
+    }
+
+    fun assert_min_confirmations_within_signers(min_confirmations: u16, signer_count: u64) {
+        assert!((min_confirmations as u64) <= signer_count, errors::E_INVALID_ARGUMENT);
+    }
+
     entry fun init(
         source_chain: String,
         signer_pubkeys: vector<vector<u8>>,
@@ -81,6 +95,8 @@ module aoxc::neural_bridge {
         ctx: &mut TxContext,
     ) {
         validate_min_confirmations(min_confirmations);
+        validate_signer_set(&signer_pubkeys);
+        assert_min_confirmations_within_signers(min_confirmations, vector::length(&signer_pubkeys));
 
         let cap = GatewayAdminCap { id: object::new(ctx) };
         let gateway = NeuralGateway {
@@ -95,11 +111,14 @@ module aoxc::neural_bridge {
     }
 
     entry fun rotate_signers(_cap: &GatewayAdminCap, gateway: &mut NeuralGateway, next: vector<vector<u8>>) {
+        validate_signer_set(&next);
+        assert_min_confirmations_within_signers(gateway.min_confirmations, vector::length(&next));
         gateway.signer_pubkeys = next;
     }
 
     entry fun set_min_confirmations(_cap: &GatewayAdminCap, gateway: &mut NeuralGateway, next: u16) {
         validate_min_confirmations(next);
+        assert_min_confirmations_within_signers(next, vector::length(&gateway.signer_pubkeys));
         gateway.min_confirmations = next;
     }
 
@@ -116,12 +135,14 @@ module aoxc::neural_bridge {
         assert!(command.quorum_epoch == relay::epoch(quorum), errors::E_INVALID_ARGUMENT);
         assert!(clock::timestamp_ms(clock) <= command.deadline_ms, errors::E_TIMELOCK_EXPIRED);
         assert!(command.confirmations >= gateway.min_confirmations, errors::E_INVALID_ARGUMENT);
+        assert!(vector::length(&command.command_id) > 0, errors::E_INVALID_ARGUMENT);
 
         let digest = command_digest(&command);
         assert!(!table::contains(&gateway.used_digests, &digest), errors::E_REPLAY);
 
         let payload_kind = bridge_payload::kind(&command.payload);
         let signer_count = verify_quorum_signatures(&signatures, quorum, &gateway.signer_pubkeys, &digest, relay::threshold(quorum));
+        assert!(signer_count >= command.confirmations, errors::E_INVALID_ARGUMENT);
 
         if (payload_kind == bridge_payload::kind_system_halt()) {
             circuit_breaker::pause_from_module(breaker, bridge_payload::proof_root(&command.payload));
