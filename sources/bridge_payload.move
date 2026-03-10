@@ -284,6 +284,7 @@ module aoxc::bridge_payload {
     public fun decode_asset_mint_payload(raw: vector<u8>): BridgePayload {
         let decoded = bcs::from_bytes<AssetRoutePayload>(&raw);
         validate_asset_route_payload(&decoded, KIND_X_MINT);
+        assert!(decoded.amount > 0, errors::E_AMOUNT_ZERO);
         new_bridge_payload(decoded.schema_version, decoded.evm_chain_id, decoded.xlayer_sender, KIND_X_MINT, decoded.target_module, decoded.ref_id, string::utf8(b"xlayer-asset-mint"), decoded.proof_root)
     }
 
@@ -337,6 +338,10 @@ module aoxc::bridge_payload {
             decoded.desired_outcome,
             decoded.proof_root,
         )
+    }
+
+        assert!(decoded.amount > 0, errors::E_AMOUNT_ZERO);
+        new_bridge_payload(decoded.schema_version, decoded.evm_chain_id, decoded.xlayer_sender, KIND_X_BURN, decoded.target_module, decoded.ref_id, string::utf8(b"xlayer-asset-burn"), decoded.proof_root)
     }
 
     public fun decode_governance_action(raw: vector<u8>): GovernanceAction {

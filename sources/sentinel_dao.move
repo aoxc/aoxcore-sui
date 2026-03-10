@@ -149,6 +149,7 @@ module aoxc::sentinel_dao {
         *votes = *votes + weight;
     }
 
+
     entry fun sentinel_emergency_halt(
         _bot_cap: &SentinelBotCap,
         breaker: &mut circuit_breaker::CircuitBreaker,

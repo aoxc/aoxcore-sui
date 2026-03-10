@@ -140,6 +140,28 @@ module aoxc::phase1_negative_tests {
         liquidity_manager::validate_slippage_bps(4000);
     }
 
+
+
+    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
+    fun treasury_reconciliation_rejects_non_interval_block() {
+        treasury::validate_reconciliation_checkpoint(1000, 1001, 0, 32);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_RECONCILIATION_FAILED)]
+    fun staking_rejects_broken_capital_equation() {
+        staking::validate_capital_equation(10, 15, 20);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
+    fun treasury_reconciliation_rejects_non_interval_block() {
+        treasury::validate_reconciliation_checkpoint(1000, 1001, 0, 32);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_RECONCILIATION_FAILED)]
+    fun staking_rejects_broken_capital_equation() {
+        staking::validate_capital_equation(10, 15, 20);
+    }
+
     #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
     fun treasury_reconciliation_rejects_non_interval_block() {
         treasury::validate_reconciliation_checkpoint(1000, 1001, 0, 32);
