@@ -19,6 +19,7 @@ module aoxc::liquidity_manager {
         max_slippage_bps: u16,
         swaps_count: u64,
         lp_ops_count: u64,
+        tracked_liquidity_total: u64,
     }
 
     public struct SwapRouted has copy, drop { dex: String, amount_in: u64, min_out: u64 }
@@ -44,6 +45,7 @@ module aoxc::liquidity_manager {
             max_slippage_bps: 500,
             swaps_count: 0,
             lp_ops_count: 0,
+            tracked_liquidity_total: 0,
         };
 
         sui::transfer::share_object(hub);
@@ -109,6 +111,13 @@ module aoxc::liquidity_manager {
         assert!(amount_a > 0 && amount_b > 0, errors::E_AMOUNT_ZERO);
 
         hub.lp_ops_count = hub.lp_ops_count + 1;
+        hub.tracked_liquidity_total = hub.tracked_liquidity_total + amount_a + amount_b;
         event::emit(LiquidityRouted { dex, amount_a, amount_b });
     }
+
+    public fun tracked_liquidity_total(hub: &LiquidityHub): u64 { hub.tracked_liquidity_total }
+}
+
+spec module {
+    invariant forall h: LiquidityHub :: h.tracked_liquidity_total >= 0;
 }

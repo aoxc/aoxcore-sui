@@ -12,6 +12,15 @@ module aoxc::treasury {
 
     public struct TreasuryDistributorCap has key, store { id: UID }
 
+    public struct ReconciliationState has key {
+        id: UID,
+        checkpoint_interval_blocks: u64,
+        last_checkpoint_block: u64,
+        last_external_locked_tvl: u64,
+        last_checkpoint_root: vector<u8>,
+        permanent_halt_triggered: bool,
+    }
+
     public struct AutonomousTreasury<phantom T> has key {
         id: UID,
         vault: Balance<T>,
@@ -46,6 +55,7 @@ module aoxc::treasury {
     public struct MerkleRewardClaimed has copy, drop { epoch: u64, user: address, amount: u64 }
     public struct YieldPolicyUpdated has copy, drop { lending_enabled: bool, liquidity_enabled: bool, lending_allocation_bps: u16, liquidity_allocation_bps: u16 }
     public struct YieldRebalanced has copy, drop { nonce: u64, lending_amount: u64, liquidity_amount: u64 }
+    public struct ReconciliationCheckpointed has copy, drop { block_height: u64, external_locked_tvl: u64, local_accounted_supply: u64, permanent_halt_triggered: bool }
 
     struct ClaimLeafInput has copy, drop, store {
         epoch: u64,
@@ -56,6 +66,20 @@ module aoxc::treasury {
 
     public fun validate_distribution_vectors(recipients_len: u64, amounts_len: u64) {
         assert!(recipients_len == amounts_len, errors::E_LENGTH_MISMATCH);
+    }
+
+
+
+    public fun validate_reconciliation_checkpoint(
+        checkpoint_interval_blocks: u64,
+        next_block_height: u64,
+        last_checkpoint_block: u64,
+        proof_root_len: u64,
+    ) {
+        assert!(checkpoint_interval_blocks > 0, errors::E_INVALID_ARGUMENT);
+        assert!(next_block_height > last_checkpoint_block, errors::E_INVALID_ARGUMENT);
+        assert!(next_block_height % checkpoint_interval_blocks == 0, errors::E_POLICY_LIMIT);
+        assert!(proof_root_len > 0, errors::E_EMPTY_HASH);
     }
 
     fun contains_hash(book: &vector<vector<u8>>, h: &vector<u8>): bool {
@@ -112,6 +136,14 @@ module aoxc::treasury {
             epoch: 0,
             claimed_leaf_hashes: vector::empty<vector<u8>>(),
         };
+        let reconcile = ReconciliationState {
+            id: object::new(ctx),
+            checkpoint_interval_blocks: 1000,
+            last_checkpoint_block: 0,
+            last_external_locked_tvl: 0,
+            last_checkpoint_root: vector::empty<u8>(),
+            permanent_halt_triggered: false,
+        };
         let hooks = YieldHookConfig {
             id: object::new(ctx),
             lending_enabled: false,
@@ -125,6 +157,7 @@ module aoxc::treasury {
         sui::transfer::share_object(treasury);
         sui::transfer::share_object(claim_pool);
         sui::transfer::share_object(hooks);
+        sui::transfer::share_object(reconcile);
         sui::transfer::transfer(cap, tx_context::sender(ctx));
     }
 
@@ -259,6 +292,39 @@ module aoxc::treasury {
         event::emit(YieldPolicyUpdated { lending_enabled, liquidity_enabled, lending_allocation_bps, liquidity_allocation_bps });
     }
 
+
+
+    entry fun submit_reconciliation_checkpoint<T>(
+        _cap: &TreasuryDistributorCap,
+        breaker: &mut circuit_breaker::CircuitBreaker,
+        treasury: &AutonomousTreasury<T>,
+        state: &mut ReconciliationState,
+        block_height: u64,
+        external_locked_tvl: u64,
+        proof_root: vector<u8>,
+    ) {
+        validate_reconciliation_checkpoint(state.checkpoint_interval_blocks, block_height, state.last_checkpoint_block, vector::length(&proof_root));
+
+        let local_accounted_supply = balance::value(&treasury.vault) + treasury.distributed_total;
+        let mut permanent_halt = false;
+        if (local_accounted_supply > external_locked_tvl) {
+            permanent_halt = true;
+            state.permanent_halt_triggered = true;
+            circuit_breaker::emergency_freeze_permanent(breaker, copy proof_root);
+        };
+
+        state.last_checkpoint_block = block_height;
+        state.last_external_locked_tvl = external_locked_tvl;
+        state.last_checkpoint_root = proof_root;
+
+        event::emit(ReconciliationCheckpointed {
+            block_height,
+            external_locked_tvl,
+            local_accounted_supply,
+            permanent_halt_triggered: permanent_halt,
+        });
+    }
+
     entry fun rebalance_yield<T>(
         _cap: &TreasuryDistributorCap,
         breaker: &circuit_breaker::CircuitBreaker,
@@ -284,6 +350,7 @@ module aoxc::treasury {
     }
 
     public fun hooks_nonce(hooks: &YieldHookConfig): u64 { hooks.rebalance_nonce }
+    public fun reconciliation_halted(state: &ReconciliationState): bool { state.permanent_halt_triggered }
 
     public fun balance_of<T>(treasury: &AutonomousTreasury<T>): u64 { balance::value(&treasury.vault) }
 

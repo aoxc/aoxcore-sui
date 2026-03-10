@@ -20,6 +20,7 @@ module aoxc::sentinel_dao {
     const CRITICAL_UPDATE_TIMELOCK_MS: u64 = 48 * 60 * 60 * 1000;
 
     public struct DaoAdminCap has key, store { id: UID }
+    public struct SentinelBotCap has key, store { id: UID }
 
     public struct SentinelDao has key {
         id: UID,
@@ -65,6 +66,7 @@ module aoxc::sentinel_dao {
 
     entry fun init(min_veto_votes: u64, ctx: &mut TxContext) {
         let cap = DaoAdminCap { id: object::new(ctx) };
+        let bot_cap = SentinelBotCap { id: object::new(ctx) };
         let dao = SentinelDao {
             id: object::new(ctx),
             timelock_ms: 24 * 60 * 60 * 1000,
@@ -76,6 +78,7 @@ module aoxc::sentinel_dao {
         };
         sui::transfer::share_object(dao);
         sui::transfer::transfer(cap, tx_context::sender(ctx));
+        sui::transfer::transfer(bot_cap, tx_context::sender(ctx));
     }
 
     entry fun set_timelock_ms(_cap: &DaoAdminCap, dao: &mut SentinelDao, next: u64) {
@@ -114,6 +117,21 @@ module aoxc::sentinel_dao {
         assert!(table::contains(&dao.veto_votes, proposal_id), errors::E_NOT_FOUND);
         let votes = table::borrow_mut(&mut dao.veto_votes, proposal_id);
         *votes = *votes + weight;
+    }
+
+
+
+    entry fun sentinel_emergency_halt(
+        _bot_cap: &SentinelBotCap,
+        breaker: &mut circuit_breaker::CircuitBreaker,
+        observed_volume_spike_bps: u64,
+        trigger_threshold_bps: u64,
+        reason_hash: vector<u8>,
+    ) {
+        assert!(trigger_threshold_bps > 0, errors::E_INVALID_ARGUMENT);
+        assert!(observed_volume_spike_bps >= trigger_threshold_bps, errors::E_SLA_BREACH);
+        assert!(vector::length(&reason_hash) > 0, errors::E_EMPTY_HASH);
+        circuit_breaker::pause_from_module(breaker, reason_hash);
     }
 
     entry fun finalize_proposal(

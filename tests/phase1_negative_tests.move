@@ -31,6 +31,17 @@ module aoxc::phase1_negative_tests {
     }
 
     #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun bridge_rejects_empty_signer_set() {
+        neural_bridge::validate_signer_set(&vector::empty<vector<u8>>());
+    }
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun bridge_rejects_empty_signer_pubkey() {
+        let keys = vector[vector::empty<u8>()];
+        neural_bridge::validate_signer_set(&keys);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
     fun relay_rejects_unknown_report_type() {
         relay::validate_report_type(99);
     }
@@ -98,6 +109,18 @@ module aoxc::phase1_negative_tests {
     #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
     fun liquidity_rejects_excessive_slippage_limit() {
         liquidity_manager::validate_slippage_bps(4000);
+    }
+
+
+
+    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
+    fun treasury_reconciliation_rejects_non_interval_block() {
+        treasury::validate_reconciliation_checkpoint(1000, 1001, 0, 32);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_RECONCILIATION_FAILED)]
+    fun staking_rejects_broken_capital_equation() {
+        staking::validate_capital_equation(10, 15, 20);
     }
 
     #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
