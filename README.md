@@ -95,6 +95,7 @@ Key documents include:
 - architecture specifications
 - whitepaper (vision, security posture, roadmap to production)
 - future readiness plan (audit closure + crypto agility roadmap)
+- code audit report (module-by-module findings and action plan)
 
 ---
 
