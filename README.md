@@ -84,7 +84,7 @@ Each module is designed with strict type safety and explicit ownership semantics
 
 ## Documentation (`/docs`)
 
-Technical documentation and operational specifications.
+Technical documentation and operational specifications, including the project whitepaper.
 
 Key documents include:
 
@@ -93,6 +93,7 @@ Key documents include:
 - release verification procedures
 - indexer operational runbooks
 - architecture specifications
+- whitepaper (vision, security posture, roadmap to production)
 
 ---
 
