@@ -22,6 +22,13 @@ module aoxc::auto_rebalancer {
         snapshot_id: u64,
     }
 
+    public fun validate_thresholds(soft_mismatch_bps: u64, hard_mismatch_bps: u64) {
+        assert!(soft_mismatch_bps > 0, errors::E_INVALID_ARGUMENT);
+        assert!(hard_mismatch_bps >= soft_mismatch_bps, errors::E_INVALID_ARGUMENT);
+    }
+
+    entry fun init(soft_mismatch_bps: u64, hard_mismatch_bps: u64, ctx: &mut TxContext) {
+        validate_thresholds(soft_mismatch_bps, hard_mismatch_bps);
     entry fun init(soft_mismatch_bps: u64, hard_mismatch_bps: u64, ctx: &mut TxContext) {
         assert!(soft_mismatch_bps > 0, errors::E_INVALID_ARGUMENT);
         assert!(hard_mismatch_bps >= soft_mismatch_bps, errors::E_INVALID_ARGUMENT);
@@ -42,6 +49,7 @@ module aoxc::auto_rebalancer {
         soft_mismatch_bps: u64,
         hard_mismatch_bps: u64,
     ) {
+        validate_thresholds(soft_mismatch_bps, hard_mismatch_bps);
         assert!(soft_mismatch_bps > 0, errors::E_INVALID_ARGUMENT);
         assert!(hard_mismatch_bps >= soft_mismatch_bps, errors::E_INVALID_ARGUMENT);
         state.soft_mismatch_bps = soft_mismatch_bps;
@@ -60,6 +68,9 @@ module aoxc::auto_rebalancer {
         let mut escalated = false;
 
         if (mismatch_bps <= state.soft_mismatch_bps) {
+            soft = true;
+        } else if (mismatch_bps <= state.hard_mismatch_bps) {
+            // degraded-but-recoverable range, keep protocol live with rebalancing intent
             soft = true;
         } else {
             escalated = true;

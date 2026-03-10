@@ -15,6 +15,7 @@ module aoxc::phase1_negative_tests {
     use aoxc::sentinel_dao;
     use aoxc::treasury;
     use aoxc::walrus_connector;
+    use aoxc::auto_rebalancer;
     use aoxc::verifier_registry;
 
     #[test, expected_failure(abort_code = errors::E_STATUS_INVALID)]
@@ -86,6 +87,13 @@ module aoxc::phase1_negative_tests {
         walrus_connector::validate_credential_inputs(&vector::empty<u8>(), &b"subject", &b"claim", &b"cert");
     }
 
+
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun rebalancer_rejects_invalid_thresholds() {
+        auto_rebalancer::validate_thresholds(100, 99);
+    }
+
     #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
     fun dao_rejects_unknown_action() {
         sentinel_dao::validate_action_type(200);
@@ -141,6 +149,16 @@ module aoxc::phase1_negative_tests {
     }
 
 
+
+    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
+    fun treasury_reconciliation_rejects_non_interval_block() {
+        treasury::validate_reconciliation_checkpoint(1000, 1001, 0, 32);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_RECONCILIATION_FAILED)]
+    fun staking_rejects_broken_capital_equation() {
+        staking::validate_capital_equation(10, 15, 20);
+    }
 
     #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
     fun treasury_reconciliation_rejects_non_interval_block() {
