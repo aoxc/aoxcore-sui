@@ -1,4 +1,5 @@
 module aoxc::walrus_connector {
+    use std::bcs;
     use std::vector;
     use aoxc::errors;
     use sui::event;
@@ -40,6 +41,20 @@ module aoxc::walrus_connector {
         claim_hash: vector<u8>,
         certified_id: vector<u8>,
     }
+
+    struct ReputationCredentialClaim has copy, drop, store {
+        user: address,
+        score: u64,
+        honesty_epoch: u64,
+        evidence_hash: vector<u8>,
+    }
+
+    public struct ReputationCredentialAnchored has copy, drop {
+        user: address,
+        score: u64,
+        certified_id: vector<u8>,
+    }
+
 
     entry fun init(ctx: &mut TxContext) {
         let cap = WalrusAdminCap { id: object::new(ctx) };
@@ -96,6 +111,27 @@ module aoxc::walrus_connector {
         let _vc = VerifiableCredential { version: 1, issuer, subject, claim_hash: copy claim_hash, certified_id: copy certified_id };
         table::add(&mut archive.hash_to_certified_id, copy claim_hash, copy certified_id);
         event::emit(CredentialAnchored { claim_hash, certified_id });
+    }
+
+
+
+    entry fun anchor_reputation_credential(
+        _cap: &WalrusAdminCap,
+        archive: &mut WalrusArchive,
+        issuer: vector<u8>,
+        user: address,
+        score: u64,
+        honesty_epoch: u64,
+        evidence_hash: vector<u8>,
+        certified_id: vector<u8>,
+    ) {
+        assert!(vector::length(&evidence_hash) > 0, errors::E_EMPTY_HASH);
+        let claim = ReputationCredentialClaim { user, score, honesty_epoch, evidence_hash };
+        let claim_hash = sui::hash::keccak256(&bcs::to_bytes(&claim));
+        validate_credential_inputs(&issuer, &vector[114,101,112,117,116,97,116,105,111,110], &claim_hash, &certified_id);
+        assert!(!table::contains(&archive.hash_to_certified_id, &claim_hash), errors::E_ALREADY_EXISTS);
+        table::add(&mut archive.hash_to_certified_id, claim_hash, copy certified_id);
+        event::emit(ReputationCredentialAnchored { user, score, certified_id });
     }
 
     public fun certified_id_for(archive: &WalrusArchive, payload_hash: vector<u8>): vector<u8> {
