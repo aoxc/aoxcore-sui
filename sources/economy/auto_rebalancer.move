@@ -29,6 +29,9 @@ module aoxc::auto_rebalancer {
 
     entry fun init(soft_mismatch_bps: u64, hard_mismatch_bps: u64, ctx: &mut TxContext) {
         validate_thresholds(soft_mismatch_bps, hard_mismatch_bps);
+    entry fun init(soft_mismatch_bps: u64, hard_mismatch_bps: u64, ctx: &mut TxContext) {
+        assert!(soft_mismatch_bps > 0, errors::E_INVALID_ARGUMENT);
+        assert!(hard_mismatch_bps >= soft_mismatch_bps, errors::E_INVALID_ARGUMENT);
         let cap = RebalancerAdminCap { id: object::new(ctx) };
         let state = AutoRebalancer {
             id: object::new(ctx),
@@ -47,6 +50,8 @@ module aoxc::auto_rebalancer {
         hard_mismatch_bps: u64,
     ) {
         validate_thresholds(soft_mismatch_bps, hard_mismatch_bps);
+        assert!(soft_mismatch_bps > 0, errors::E_INVALID_ARGUMENT);
+        assert!(hard_mismatch_bps >= soft_mismatch_bps, errors::E_INVALID_ARGUMENT);
         state.soft_mismatch_bps = soft_mismatch_bps;
         state.hard_mismatch_bps = hard_mismatch_bps;
     }
