@@ -118,4 +118,13 @@ module aoxc::staking {
     }
 
     public fun principal_of<T>(pool: &StakingPool<T>): u64 { balance::value(&pool.principal) }
+
+    /// Capital conservation guard for integration-level checks.
+    public fun validate_capital_equation(total_staked: u64, total_liquidity: u64, global_treasury_balance: u64) {
+        assert!(total_staked + total_liquidity == global_treasury_balance, errors::E_RECONCILIATION_FAILED);
+    }
+}
+
+spec module {
+    invariant forall<T> p: StakingPool<T> :: balance::value(&p.principal) >= 0;
 }
