@@ -42,4 +42,10 @@ module aoxc::errors {
     public const E_SLA_BREACH: u64 = 28;
     public const E_MARKETPLACE_LICENSE: u64 = 29;
     public const E_POOL_NOT_ENABLED: u64 = 30;
+    public const E_FINALITY_PENDING: u64 = 31;
+    public const E_RECONCILIATION_FAILED: u64 = 32;
+
+    /// Reserved slots for forward-compatible AI-agent flows.
+    public const E_AGENT_RESERVED_1: u64 = 1001;
+    public const E_AGENT_RESERVED_2: u64 = 1002;
 }

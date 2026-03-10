@@ -14,6 +14,9 @@ module aoxc::phase1_negative_tests {
     use aoxc::reputation;
     use aoxc::sentinel_dao;
     use aoxc::treasury;
+    use aoxc::walrus_connector;
+    use aoxc::auto_rebalancer;
+    use aoxc::verifier_registry;
 
     #[test, expected_failure(abort_code = errors::E_STATUS_INVALID)]
     fun aoxc_rejects_invalid_status() {
@@ -31,6 +34,17 @@ module aoxc::phase1_negative_tests {
     }
 
     #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun bridge_rejects_empty_signer_set() {
+        neural_bridge::validate_signer_set(&vector::empty<vector<u8>>());
+    }
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun bridge_rejects_empty_signer_pubkey() {
+        let keys = vector[vector::empty<u8>()];
+        neural_bridge::validate_signer_set(&keys);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
     fun relay_rejects_unknown_report_type() {
         relay::validate_report_type(99);
     }
@@ -44,6 +58,45 @@ module aoxc::phase1_negative_tests {
     fun reputation_rejects_empty_evidence_hash() {
         let empty = vector::empty<u8>();
         reputation::validate_evidence_hash(&empty);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun dao_rejects_anomaly_score_over_100() {
+        sentinel_dao::validate_anomaly_score(10_001);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_EMPTY_HASH)]
+    fun walrus_rejects_empty_blob_hash() {
+        walrus_connector::validate_blob_inputs(&vector::empty<u8>(), &b"cert", &b"bridge");
+    }
+
+
+
+    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
+    fun intent_rejects_bad_success_bps() {
+        bridge_payload::validate_intent(&string::utf8(b"ok"), 10_001, 1);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun verifier_registry_rejects_unknown_verifier() {
+        verifier_registry::validate_verifier(&string::utf8(b"unknown-verifier"));
+    }
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun walrus_rejects_empty_credential_issuer() {
+        walrus_connector::validate_credential_inputs(&vector::empty<u8>(), &b"subject", &b"claim", &b"cert");
+    }
+
+
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun rebalancer_rejects_invalid_thresholds() {
+        auto_rebalancer::validate_thresholds(100, 99);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
+    fun rebalancer_rejects_zero_soft_threshold() {
+        auto_rebalancer::validate_thresholds(0, 100);
     }
 
     #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
@@ -98,6 +151,16 @@ module aoxc::phase1_negative_tests {
     #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
     fun liquidity_rejects_excessive_slippage_limit() {
         liquidity_manager::validate_slippage_bps(4000);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
+    fun treasury_reconciliation_rejects_non_interval_block() {
+        treasury::validate_reconciliation_checkpoint(1000, 1001, 0, 32);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_RECONCILIATION_FAILED)]
+    fun staking_rejects_broken_capital_equation() {
+        staking::validate_capital_equation(10, 15, 20);
     }
 
     #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
