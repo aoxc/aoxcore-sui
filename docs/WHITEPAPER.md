@@ -171,6 +171,18 @@ That is a healthier and more credible posture than over-claiming perfection.
 
 ---
 
+
+## Quantum and Cryptographic Agility
+AOXC should treat post-quantum readiness as a staged migration problem, not a marketing claim.
+
+Recommended approach:
+- maintain strict domain-separated digesting,
+- add verifier abstraction points,
+- adopt hybrid signature windows before any PQC-primary switch,
+- publish migration evidence and compatibility boundaries.
+
+See `docs/FUTURE_READINESS.md` for the execution roadmap.
+
 ## Conclusion
 AOXC Sui Protocol already provides a meaningful security-first architecture with good modularity and typed validation.
 
