@@ -120,6 +120,7 @@ module aoxc::full_flow_tests {
         let cardano = bridge_payload::new_bridge_payload(
             bridge_payload::schema_v1(),
             bridge_payload::cardano_mainnet_network_magic(),
+            999_999,
             xsender(),
             bridge_payload::kind_system_resume(),
             bridge_payload::target_breaker(),
