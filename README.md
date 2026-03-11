@@ -120,6 +120,7 @@ Key documents include:
 - code audit report (module-by-module findings and action plan)
 - architecture alignment (Sui-first execution + XLayer interoperability fit)
 - compatibility matrix (EVM + Cardano + Web relay domain mapping)
+- audit evidence bundle template (mainnet-candidate release artifacts)
 - production-ready report (gas/object/web4 compatibility scoring)
 
 ---
@@ -411,3 +412,6 @@ Aşağıdaki kapılar geçmeden merge önerilmez:
 
 `bridge_payload` katmanı XLayer/EVM + Cardano + web domain id allowlist’i uygular.
 Domain’e özel imza/finality doğrulamaları üst katmanda ayrıca zorunlu tutulmalıdır.
+
+
+Audit evidence template: `docs/AUDIT_EVIDENCE_BUNDLE.md`.
