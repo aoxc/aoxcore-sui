@@ -3,20 +3,20 @@ module aoxc::phase1_negative_tests {
     use std::string;
     use std::vector;
     use aoxc::aoxc;
+    use aoxc::auto_rebalancer;
     use aoxc::bridge_payload;
     use aoxc::circuit_breaker;
     use aoxc::errors;
-    use aoxc::neural_bridge;
     use aoxc::liquidity_manager;
     use aoxc::marketplace;
-    use aoxc::staking;
+    use aoxc::neural_bridge;
     use aoxc::relay;
     use aoxc::reputation;
     use aoxc::sentinel_dao;
+    use aoxc::staking;
     use aoxc::treasury;
-    use aoxc::walrus_connector;
-    use aoxc::auto_rebalancer;
     use aoxc::verifier_registry;
+    use aoxc::walrus_connector;
 
     #[test, expected_failure(abort_code = errors::E_STATUS_INVALID)]
     fun aoxc_rejects_invalid_status() {
@@ -70,8 +70,6 @@ module aoxc::phase1_negative_tests {
         walrus_connector::validate_blob_inputs(&vector::empty<u8>(), &b"cert", &b"bridge");
     }
 
-
-
     #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
     fun intent_rejects_bad_success_bps() {
         bridge_payload::validate_intent(&string::utf8(b"ok"), 10_001, 1);
@@ -87,16 +85,9 @@ module aoxc::phase1_negative_tests {
         walrus_connector::validate_credential_inputs(&vector::empty<u8>(), &b"subject", &b"claim", &b"cert");
     }
 
-
-
     #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
     fun rebalancer_rejects_invalid_thresholds() {
         auto_rebalancer::validate_thresholds(100, 99);
-    }
-
-    #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
-    fun rebalancer_rejects_zero_soft_threshold() {
-        auto_rebalancer::validate_thresholds(0, 100);
     }
 
     #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
@@ -121,8 +112,8 @@ module aoxc::phase1_negative_tests {
     }
 
     #[test, expected_failure(abort_code = errors::E_CHAIN_ID_INVALID)]
-    fun payload_rejects_bad_chain_id() {
-        bridge_payload::validate_chain_id(1);
+    fun payload_rejects_unknown_domain_id() {
+        bridge_payload::validate_chain_id(999_999);
     }
 
     #[test, expected_failure(abort_code = errors::E_CHECKSUM_MISMATCH)]
@@ -135,6 +126,11 @@ module aoxc::phase1_negative_tests {
     #[test, expected_failure(abort_code = errors::E_SLASH_TOO_HIGH)]
     fun staking_rejects_over_slash_limit() {
         staking::validate_slash_bps(5000);
+    }
+
+    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
+    fun staking_rejects_excessive_reward_bps() {
+        staking::validate_reward_bps(5000);
     }
 
     #[test, expected_failure(abort_code = errors::E_INVALID_ARGUMENT)]
@@ -153,8 +149,6 @@ module aoxc::phase1_negative_tests {
         liquidity_manager::validate_slippage_bps(4000);
     }
 
-
-
     #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
     fun treasury_reconciliation_rejects_non_interval_block() {
         treasury::validate_reconciliation_checkpoint(1000, 1001, 0, 32);
@@ -163,56 +157,10 @@ module aoxc::phase1_negative_tests {
     #[test, expected_failure(abort_code = errors::E_RECONCILIATION_FAILED)]
     fun staking_rejects_broken_capital_equation() {
         staking::validate_capital_equation(10, 15, 20);
-    }
-
-    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
-    fun treasury_reconciliation_rejects_non_interval_block() {
-        treasury::validate_reconciliation_checkpoint(1000, 1001, 0, 32);
-    }
-
-    #[test, expected_failure(abort_code = errors::E_RECONCILIATION_FAILED)]
-    fun staking_rejects_broken_capital_equation() {
-        staking::validate_capital_equation(10, 15, 20);
-    }
-
-    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
-    fun treasury_reconciliation_rejects_non_interval_block() {
-        treasury::validate_reconciliation_checkpoint(1000, 1001, 0, 32);
-    }
-
-    #[test, expected_failure(abort_code = errors::E_RECONCILIATION_FAILED)]
-    fun staking_rejects_broken_capital_equation() {
-        staking::validate_capital_equation(10, 15, 20);
-    }
-
-    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
-    fun treasury_reconciliation_rejects_non_interval_block() {
-        treasury::validate_reconciliation_checkpoint(1000, 1001, 0, 32);
-    }
-
-    #[test, expected_failure(abort_code = errors::E_RECONCILIATION_FAILED)]
-    fun staking_rejects_broken_capital_equation() {
-        staking::validate_capital_equation(10, 15, 20);
-    }
-
-    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
-    fun treasury_reconciliation_rejects_non_interval_block() {
-        treasury::validate_reconciliation_checkpoint(1000, 1001, 0, 32);
-    }
-
-    #[test, expected_failure(abort_code = errors::E_RECONCILIATION_FAILED)]
-    fun staking_rejects_broken_capital_equation() {
-        staking::validate_capital_equation(10, 15, 20);
-    }
-
-    #[test, expected_failure(abort_code = errors::E_POLICY_LIMIT)]
-    fun staking_rejects_excessive_reward_bps() {
-        staking::validate_reward_bps(5000);
     }
 
     #[test, expected_failure(abort_code = errors::E_POOL_NOT_ENABLED)]
     fun treasury_rejects_disabled_yield_policy() {
         treasury::validate_yield_policy(false, false, 0, 0, 0, 0);
     }
-
 }

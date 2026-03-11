@@ -104,6 +104,46 @@ module aoxc::full_flow_tests {
         assert!(bridge_payload::is_supported_chain_id(bridge_payload::web_relay_stage_domain_id()), 16);
     }
 
+
+    #[test]
+    fun can_build_payload_for_all_supported_domains() {
+        let eth = bridge_payload::new_bridge_payload(
+            bridge_payload::schema_v1(),
+            bridge_payload::ethereum_chain_id(),
+            xsender(),
+            bridge_payload::kind_system_halt(),
+            bridge_payload::target_breaker(),
+            701,
+            string::utf8(b"eth-halt"),
+            b"eth-proof",
+        );
+        let cardano = bridge_payload::new_bridge_payload(
+            bridge_payload::schema_v1(),
+            bridge_payload::cardano_mainnet_network_magic(),
+            999_999,
+            xsender(),
+            bridge_payload::kind_system_resume(),
+            bridge_payload::target_breaker(),
+            702,
+            string::utf8(b"cardano-resume"),
+            b"cardano-proof",
+        );
+        let web = bridge_payload::new_bridge_payload(
+            bridge_payload::schema_v1(),
+            bridge_payload::web_relay_prod_domain_id(),
+            xsender(),
+            bridge_payload::kind_fund_update(),
+            bridge_payload::target_treasury(),
+            703,
+            string::utf8(b"web-fund-update"),
+            b"web-proof",
+        );
+
+        let _ = eth;
+        let _ = cardano;
+        let _ = web;
+    }
+
     #[test]
     #[expected_failure(abort_code = 2)]
     fun typed_payload_rejects_zero_sender() {

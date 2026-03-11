@@ -120,6 +120,7 @@ Key documents include:
 - code audit report (module-by-module findings and action plan)
 - architecture alignment (Sui-first execution + XLayer interoperability fit)
 - compatibility matrix (EVM + Cardano + Web relay domain mapping)
+- audit evidence bundle template (mainnet-candidate release artifacts)
 - production-ready report (gas/object/web4 compatibility scoring)
 
 ---
@@ -376,3 +377,41 @@ See the `LICENSE` file for details.
 <div align="center">
   <sub>© 2026 AOXC Protocol | Secure. Auditable. Intelligent.</sub>
 </div>
+
+---
+
+# Mainnet-Readiness (Audit-Oriented)
+
+Aşağıdaki yaklaşım, "mainnet’e yakın" test ve release disiplinini minimum baseline olarak önerir.
+
+## 1) Test Piramidi
+
+- **Unit/Invariant tests (her PR):** input doğrulama, abort-code eşleşmesi, whitelist/allowlist kontrolleri.
+- **Scenario tests (her PR):** bridge -> dao -> treasury akışlarında failure-recovery yolları.
+- **Release-candidate tests (tag öncesi):** deterministik tekrar koşuları + event schema uyumluluğu.
+
+## 2) Merge Gate (zorunlu)
+
+Aşağıdaki kapılar geçmeden merge önerilmez:
+
+1. `move fmt` (veya eşdeğer format kontrolü)
+2. `sui move build`
+3. `sui move test`
+4. Abort-code regression kontrolü (özellikle `errors.move` sabitleri)
+5. Docs/spec drift kontrolü (`docs/SPEC.md` ile modül davranışı eşleşmeli)
+
+## 3) Audit Paketi (release artefact)
+
+- Commit hash + tag + build metadata
+- Test çıktısı ve hashlenmiş artefact seti
+- Tehdit modeli güncelleme kaydı
+- Değişen modüller için "invariant impact" özeti
+- İki imzacıyla release onayı (4-eyes)
+
+## 4) Cross-Domain Operasyon Notu
+
+`bridge_payload` katmanı XLayer/EVM + Cardano + web domain id allowlist’i uygular.
+Domain’e özel imza/finality doğrulamaları üst katmanda ayrıca zorunlu tutulmalıdır.
+
+
+Audit evidence template: `docs/AUDIT_EVIDENCE_BUNDLE.md`.

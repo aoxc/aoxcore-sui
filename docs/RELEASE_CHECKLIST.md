@@ -25,3 +25,10 @@
 - [ ] Signer ceremony and key rotation record attached.
 - [ ] Rollback/kill-switch decision owner assigned.
 - [ ] Release approvers listed and signed.
+
+
+## E. Evidence Bundle Gate
+- [ ] `docs/AUDIT_EVIDENCE_BUNDLE.md` template completed.
+- [ ] Build/test logs archived with hashes.
+- [ ] 4-eyes release approval attached.
+- [ ] Cross-domain integration notes attached (EVM/Cardano/Web).
