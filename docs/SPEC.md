@@ -62,9 +62,10 @@
 - Bridge commands must target the active quorum epoch.
 - Bridge command envelope `target` must match typed payload target module.
 
-### 1.11 XLayer Compatibility Invariants
+### 1.11 Multi-Domain Compatibility Invariants
 - Payload `schema_version` must be supported.
-- `evm_chain_id` must match configured XLayer chain id.
+- Envelope `evm_chain_id` field is treated as a generic domain/network id and must be in the allowlist.
+- Supported families: XLayer/EVM ids, Cardano network magics, and web relay domain ids.
 - `target_module` must be whitelisted per action kind.
 
 ### 1.12 Phase-5 Economy Invariants

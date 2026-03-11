@@ -5,8 +5,21 @@ module aoxc::bridge_payload {
     use aoxc::errors;
 
     const SCHEMA_V1: u16 = 1;
+
+    /// EVM family chain ids.
     const XLAYER_MAINNET_CHAIN_ID: u64 = 196;
     const XLAYER_TESTNET_CHAIN_ID: u64 = 195;
+    const ETHEREUM_MAINNET_CHAIN_ID: u64 = 1;
+    const BASE_MAINNET_CHAIN_ID: u64 = 8453;
+    const ARBITRUM_ONE_CHAIN_ID: u64 = 42161;
+
+    /// Cardano network-magics represented in the same u64 field.
+    const CARDANO_MAINNET_NETWORK_MAGIC: u64 = 764824073;
+    const CARDANO_PREPROD_NETWORK_MAGIC: u64 = 1;
+
+    /// Off-chain web relay lanes (domain ids in chain-id field for envelope compatibility).
+    const WEB_RELAY_PROD_DOMAIN_ID: u64 = 90_001;
+    const WEB_RELAY_STAGE_DOMAIN_ID: u64 = 90_002;
 
     const KIND_SYSTEM_HALT: u8 = 1;
     const KIND_SYSTEM_RESUME: u8 = 2;
@@ -80,7 +93,6 @@ module aoxc::bridge_payload {
         proof_root: vector<u8>,
     }
 
-    /// Intent-based command envelope: define expected outcome and constraints.
     public struct IntentPayload has copy, drop, store {
         schema_version: u16,
         evm_chain_id: u64,
@@ -97,9 +109,20 @@ module aoxc::bridge_payload {
         assert!(version == SCHEMA_V1, errors::E_SCHEMA_VERSION);
     }
 
+    public fun is_supported_chain_id(chain_id: u64): bool {
+        chain_id == XLAYER_MAINNET_CHAIN_ID
+            || chain_id == XLAYER_TESTNET_CHAIN_ID
+            || chain_id == ETHEREUM_MAINNET_CHAIN_ID
+            || chain_id == BASE_MAINNET_CHAIN_ID
+            || chain_id == ARBITRUM_ONE_CHAIN_ID
+            || chain_id == CARDANO_MAINNET_NETWORK_MAGIC
+            || chain_id == CARDANO_PREPROD_NETWORK_MAGIC
+            || chain_id == WEB_RELAY_PROD_DOMAIN_ID
+            || chain_id == WEB_RELAY_STAGE_DOMAIN_ID
+    }
+
     public fun validate_chain_id(chain_id: u64) {
-        let ok = chain_id == XLAYER_MAINNET_CHAIN_ID || chain_id == XLAYER_TESTNET_CHAIN_ID;
-        assert!(ok, errors::E_CHAIN_ID_INVALID);
+        assert!(is_supported_chain_id(chain_id), errors::E_CHAIN_ID_INVALID);
     }
 
     fun assert_sender_not_zero(sender: &vector<u8>) {
@@ -138,8 +161,6 @@ module aoxc::bridge_payload {
             copy decoded.proof_root,
         );
     }
-
-
 
     public fun validate_intent(desired_outcome: &String, min_success_bps: u16, expiry_epoch: u64) {
         assert_message_not_empty(desired_outcome);
@@ -284,7 +305,6 @@ module aoxc::bridge_payload {
     public fun decode_asset_mint_payload(raw: vector<u8>): BridgePayload {
         let decoded = bcs::from_bytes<AssetRoutePayload>(&raw);
         validate_asset_route_payload(&decoded, KIND_X_MINT);
-        assert!(decoded.amount > 0, errors::E_AMOUNT_ZERO);
         new_bridge_payload(decoded.schema_version, decoded.evm_chain_id, decoded.xlayer_sender, KIND_X_MINT, decoded.target_module, decoded.ref_id, string::utf8(b"xlayer-asset-mint"), decoded.proof_root)
     }
 
@@ -293,8 +313,6 @@ module aoxc::bridge_payload {
         validate_asset_route_payload(&decoded, KIND_X_BURN);
         new_bridge_payload(decoded.schema_version, decoded.evm_chain_id, decoded.xlayer_sender, KIND_X_BURN, decoded.target_module, decoded.ref_id, string::utf8(b"xlayer-asset-burn"), decoded.proof_root)
     }
-
-
 
     public fun encode_intent_payload(
         schema_version: u16,
@@ -340,10 +358,6 @@ module aoxc::bridge_payload {
         )
     }
 
-        assert!(decoded.amount > 0, errors::E_AMOUNT_ZERO);
-        new_bridge_payload(decoded.schema_version, decoded.evm_chain_id, decoded.xlayer_sender, KIND_X_BURN, decoded.target_module, decoded.ref_id, string::utf8(b"xlayer-asset-burn"), decoded.proof_root)
-    }
-
     public fun decode_governance_action(raw: vector<u8>): GovernanceAction {
         let decoded = bcs::from_bytes<GovernanceAction>(&raw);
         validate_schema_version(decoded.schema_version);
@@ -379,6 +393,13 @@ module aoxc::bridge_payload {
     public fun schema_v1(): u16 { SCHEMA_V1 }
     public fun xlayer_chain_id(): u64 { XLAYER_MAINNET_CHAIN_ID }
     public fun xlayer_testnet_chain_id(): u64 { XLAYER_TESTNET_CHAIN_ID }
+    public fun ethereum_chain_id(): u64 { ETHEREUM_MAINNET_CHAIN_ID }
+    public fun base_chain_id(): u64 { BASE_MAINNET_CHAIN_ID }
+    public fun arbitrum_chain_id(): u64 { ARBITRUM_ONE_CHAIN_ID }
+    public fun cardano_mainnet_network_magic(): u64 { CARDANO_MAINNET_NETWORK_MAGIC }
+    public fun cardano_preprod_network_magic(): u64 { CARDANO_PREPROD_NETWORK_MAGIC }
+    public fun web_relay_prod_domain_id(): u64 { WEB_RELAY_PROD_DOMAIN_ID }
+    public fun web_relay_stage_domain_id(): u64 { WEB_RELAY_STAGE_DOMAIN_ID }
     public fun target_breaker(): String { string::utf8(TARGET_BREAKER) }
     public fun target_treasury(): String { string::utf8(TARGET_TREASURY) }
     public fun target_aoxc(): String { string::utf8(TARGET_AOXC) }

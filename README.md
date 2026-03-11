@@ -119,6 +119,7 @@ Key documents include:
 - future readiness plan (audit closure + crypto agility roadmap)
 - code audit report (module-by-module findings and action plan)
 - architecture alignment (Sui-first execution + XLayer interoperability fit)
+- compatibility matrix (EVM + Cardano + Web relay domain mapping)
 - production-ready report (gas/object/web4 compatibility scoring)
 
 ---
